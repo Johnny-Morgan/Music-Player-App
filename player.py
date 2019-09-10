@@ -2,8 +2,11 @@ import sys, os, random
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QSize, Qt
+from pygame import mixer
 
 music_list = []
+mixer.init()
+muted = False
 
 class Player(QWidget):
     def __init__(self):
@@ -42,7 +45,7 @@ class Player(QWidget):
         self.play_button.setIcon(QIcon("icons/play.png"))
         self.play_button.setIconSize(QSize(64, 64))
         self.play_button.setToolTip("Play")
-
+        self.play_button.clicked.connect(self.play_songs)
 
         self.next_button = QToolButton()
         self.next_button.setIcon(QIcon("icons/next.png"))
@@ -53,13 +56,20 @@ class Player(QWidget):
         self.mute_button.setIcon(QIcon("icons/mute.png"))
         self.mute_button.setIconSize(QSize(24, 24))
         self.mute_button.setToolTip("Mute")
+        self.mute_button.clicked.connect(self.mute_volume)
 
         ########## Volume Slider ##########
         self.volume_slider = QSlider(Qt.Horizontal)
         self.volume_slider.setToolTip("Volume")
+        self.volume_slider.setValue(70)
+        self.volume_slider.setMinimum(0)
+        self.volume_slider.setMaximum(100)
+        mixer.music.set_volume(0.7)  # Set volume
+        self.volume_slider.valueChanged.connect(self.change_volume)
 
         ########## Play List ##############
         self.play_list = QListWidget()
+        self.play_list.doubleClicked.connect(self.play_songs)
 
 
     def layouts(self):
@@ -110,10 +120,39 @@ class Player(QWidget):
             filename = os.path.basename(song)
             self.play_list.addItem(filename)
 
+    def play_songs(self):
+        index = self.play_list.currentRow()
+        try:
+            mixer.music.load(str(music_list[index]))
+            mixer.music.play()
+        except:
+            pass
+
+    def change_volume(self):
+        volume = self.volume_slider.value()
+        mixer.music.set_volume(volume / 100)
+
+    def mute_volume(self):
+        global muted
+        if not muted:
+            mixer.music.set_volume(0.0)
+            muted = True
+            self.mute_button.setIcon(QIcon("icons/unmuted.png"))
+            self.mute_button.setToolTip("Unmute")
+            self.volume_slider.setValue(0)
+        else:
+            mixer.music.set_volume(0.7)
+            muted = False
+            self.mute_button.setIcon(QIcon("icons/mute.png"))
+            self.mute_button.setToolTip("Mute")
+            self.volume_slider.setValue(70)
+
+
 def main():
     App = QApplication(sys.argv)
     window = Player()
     sys.exit(App.exec_())
+
 
 if __name__ =="__main__":
     main()
