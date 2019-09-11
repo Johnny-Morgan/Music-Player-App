@@ -1,12 +1,16 @@
-import sys, os, random
+import sys, os, random, time
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import QSize, Qt, QTimer
 from pygame import mixer
+from mutagen.mp3 import MP3
 
 music_list = []
 mixer.init()
 muted = False
+count = 0
+song_length = 0
+
 
 class Player(QWidget):
     def __init__(self):
@@ -23,6 +27,12 @@ class Player(QWidget):
     def widgets(self):
         ######### Progress Bar ###########
         self.progress_bar = QProgressBar()
+        self.progress_bar.setTextVisible(False)
+
+        ########## Labels ################
+        self.song_timer_label = QLabel("0:00")
+        self.song_length_label = QLabel("/ 0:00")
+
         ########## Buttons ###############
         self.add_button = QToolButton()
         self.add_button.setIcon(QIcon("icons/add.png"))
@@ -71,6 +81,10 @@ class Player(QWidget):
         self.play_list = QListWidget()
         self.play_list.doubleClicked.connect(self.play_songs)
 
+        ########## Timer ##################
+        self.timer = QTimer()
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.update_progressbar)
 
     def layouts(self):
         ########## Creating Layouts ##########
@@ -85,6 +99,8 @@ class Player(QWidget):
         ########## Adding Widgets ##############
         ########## Top Layout Widgets ##########
         self.top_layout.addWidget(self.progress_bar)
+        self.top_layout.addWidget(self.song_timer_label)
+        self.top_layout.addWidget(self.song_length_label)
 
         ########## Middle Layout Widgets #######
         self.middle_layout.addStretch()
@@ -121,10 +137,21 @@ class Player(QWidget):
             self.play_list.addItem(filename)
 
     def play_songs(self):
+        global song_length
+        global count
+        count = 0
         index = self.play_list.currentRow()
         try:
             mixer.music.load(str(music_list[index]))
             mixer.music.play()
+            self.timer.start()
+            song = MP3(str(music_list[index]))
+            song_length = song.info.length
+            song_length = round(song_length)
+            min, sec = divmod(song_length, 60)
+            self.song_length_label.setText("/ " + str(min) + ":" + str(sec))
+            self.progress_bar.setValue(0)
+            self.progress_bar.setMaximum(song_length)
         except:
             pass
 
@@ -146,6 +173,15 @@ class Player(QWidget):
             self.mute_button.setIcon(QIcon("icons/mute.png"))
             self.mute_button.setToolTip("Mute")
             self.volume_slider.setValue(70)
+
+    def update_progressbar(self):
+        global count
+        global song_length
+        count += 1
+        self.progress_bar.setValue(count)
+        self.song_timer_label.setText(time.strftime("%M:%S", time.gmtime(count)))
+        if count == song_length:
+            self.timer.stop()
 
 
 def main():
